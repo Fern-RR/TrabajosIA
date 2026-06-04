@@ -1,0 +1,48 @@
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+
+# 1. Cargar exactamente el mismo modelo de embeddings que usamos para guardar
+modelo_nombre = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
+embeddings = HuggingFaceEmbeddings(
+    model_name=modelo_nombre,
+    model_kwargs={"device": "cpu"}
+)
+
+# 2. Conectarnos a la base de datos vectorial local existente
+directorio_db = "chroma_db_violencia"
+
+print("Conectando a la base de datos vectorial...\n")
+
+vectorstore = Chroma(
+    persist_directory=directorio_db,
+    embedding_function=embeddings,
+    collection_name="violencia_mexico"
+)
+
+# 3. Consultas de prueba
+preguntas = [
+    "¿Cuáles son las tres entidades federativas con mayor índice de homicidios dolosos según los datos más recientes incluidos en el corpus?",
+    "Según los documentos, ¿cuáles son las principales causas socioeconómicas que los autores asocian directamente al incremento de la violencia urbana?",
+    "Con base en las posturas de las ONGs y las fuentes gubernamentales presentes en los textos, ¿cuáles son las principales contradicciones o discrepancias en el registro de víctimas?"
+]
+
+# 4. Ejecutar búsqueda semántica
+for pregunta in preguntas:
+    print("\n" + "=" * 100)
+    print(f"Consulta: {pregunta}")
+    print("=" * 100)
+
+    resultados = vectorstore.similarity_search_with_score(
+        pregunta,
+        k=10
+    )
+
+    for i, (doc, score) in enumerate(resultados, start=1):
+        print(f"\n--- Resultado {i} ---")
+        print(f"Distancia de similitud: {score:.4f}")
+        print(f"Fuente: {doc.metadata.get('source')}")
+        print(f"Página: {doc.metadata.get('page')}")
+        print("-" * 80)
+        print(doc.page_content[:1000])
+        print()
